@@ -339,13 +339,13 @@ public class MergeCommand extends GitCommand<MergeResult> {
 					resolveMerger.setCommitNames(new String[] {
 							"BASE", "HEAD", ref.getName() }); //$NON-NLS-1$ //$NON-NLS-2$
 					resolveMerger.setWorkingTreeIterator(new FileTreeIterator(repo));
-					noProblems = merger.merge(headCommit, srcCommit);
+					noProblems = merger.merge(monitor, headCommit, srcCommit);
 					lowLevelResults = resolveMerger
 							.getMergeResults();
 					failingPaths = resolveMerger.getFailingPaths();
 					unmergedPaths = resolveMerger.getUnmergedPaths();
 				} else
-					noProblems = merger.merge(headCommit, srcCommit);
+					noProblems = merger.merge(monitor, headCommit, srcCommit);
 				refLogMessage.append(": Merge made by "); //$NON-NLS-1$
 				if (!revWalk.isMergedInto(headCommit, srcCommit))
 					refLogMessage.append(mergeStrategy.getName());
