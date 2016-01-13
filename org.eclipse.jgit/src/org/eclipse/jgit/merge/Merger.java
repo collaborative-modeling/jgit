@@ -51,9 +51,11 @@ import org.eclipse.jgit.errors.NoMergeBaseException;
 import org.eclipse.jgit.errors.NoMergeBaseException.MergeBaseFailureReason;
 import org.eclipse.jgit.internal.JGitText;
 import org.eclipse.jgit.lib.AnyObjectId;
+import org.eclipse.jgit.lib.NullProgressMonitor;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ObjectInserter;
 import org.eclipse.jgit.lib.ObjectReader;
+import org.eclipse.jgit.lib.ProgressMonitor;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevObject;
@@ -86,6 +88,9 @@ public abstract class Merger {
 
 	/** The trees matching every entry in {@link #sourceObjects}. */
 	protected RevTree[] sourceTrees;
+
+	/** A progress monitor. */
+	protected ProgressMonitor monitor;
 
 	/**
 	 * Create a new merge instance for a repository.
@@ -152,7 +157,34 @@ public abstract class Merger {
 	 *             be written to the Repository.
 	 */
 	public boolean merge(final AnyObjectId... tips) throws IOException {
-		return merge(true, tips);
+		return merge(true, NullProgressMonitor.INSTANCE, tips);
+	}
+
+	/**
+	 * Merge together two or more tree-ish objects.
+	 * <p>
+	 * Any tree-ish may be supplied as inputs. Commits and/or tags pointing at
+	 * trees or commits may be passed as input objects.
+	 *
+	 * @param progressMonitor
+	 *            A progress monitor
+	 * @param tips
+	 *            source trees to be combined together. The merge base is not
+	 *            included in this set.
+	 * @return true if the merge was completed without conflicts; false if the
+	 *         merge strategy cannot handle this merge or there were conflicts
+	 *         preventing it from automatically resolving all paths.
+	 * @throws IncorrectObjectTypeException
+	 *             one of the input objects is not a commit, but the strategy
+	 *             requires it to be a commit.
+	 * @throws IOException
+	 *             one or more sources could not be read, or outputs could not
+	 *             be written to the Repository.
+	 */
+	public boolean merge(ProgressMonitor progressMonitor,
+			final AnyObjectId... tips)
+			throws IOException {
+		return merge(true, monitor, tips);
 	}
 
 	/**
@@ -163,8 +195,8 @@ public abstract class Merger {
 	 *
 	 * @since 3.5
 	 * @param flush
-	 *            whether to flush the underlying object inserter when finished to
-	 *            store any content-merged blobs and virtual merged bases; if
+	 *            whether to flush the underlying object inserter when finished
+	 *            to store any content-merged blobs and virtual merged bases; if
 	 *            false, callers are responsible for flushing.
 	 * @param tips
 	 *            source trees to be combined together. The merge base is not
@@ -181,6 +213,39 @@ public abstract class Merger {
 	 */
 	public boolean merge(final boolean flush, final AnyObjectId... tips)
 			throws IOException {
+		return merge(flush, NullProgressMonitor.INSTANCE, tips);
+	}
+
+	/**
+	 * Merge together two or more tree-ish objects.
+	 * <p>
+	 * Any tree-ish may be supplied as inputs. Commits and/or tags pointing at
+	 * trees or commits may be passed as input objects.
+	 *
+	 * @since 3.5
+	 * @param flush
+	 *            whether to flush the underlying object inserter when finished
+	 *            to store any content-merged blobs and virtual merged bases; if
+	 *            false, callers are responsible for flushing.
+	 * @param progressMonitor
+	 *            A progress monitor
+	 * @param tips
+	 *            source trees to be combined together. The merge base is not
+	 *            included in this set.
+	 * @return true if the merge was completed without conflicts; false if the
+	 *         merge strategy cannot handle this merge or there were conflicts
+	 *         preventing it from automatically resolving all paths.
+	 * @throws IncorrectObjectTypeException
+	 *             one of the input objects is not a commit, but the strategy
+	 *             requires it to be a commit.
+	 * @throws IOException
+	 *             one or more sources could not be read, or outputs could not
+	 *             be written to the Repository.
+	 */
+	public boolean merge(final boolean flush, ProgressMonitor progressMonitor,
+			final AnyObjectId... tips)
+			throws IOException {
+		this.monitor = progressMonitor;
 		sourceObjects = new RevObject[tips.length];
 		for (int i = 0; i < tips.length; i++)
 			sourceObjects[i] = walk.parseAny(tips[i]);
